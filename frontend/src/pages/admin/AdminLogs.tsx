@@ -9,7 +9,7 @@ export const AdminLogs = () => {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/logs', {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/logs`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setLogs(res.data);

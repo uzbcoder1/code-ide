@@ -9,7 +9,7 @@ export const AdminProjects = () => {
 
   const fetchProjects = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/projects', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/projects`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProjects(res.data);

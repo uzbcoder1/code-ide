@@ -17,7 +17,7 @@ export const EditorPanel = () => {
   const emmetRegistered = useRef(false);
   const activeProject = projects.find(p => p.id === activeProjectId);
 
-  const handleEditorDidMount = (editor: any, monaco: any) => {
+  const handleEditorDidMount = (_editor: any, monaco: any) => {
     if (!emmetRegistered.current) {
       emmetHTML(monaco);
       emmetRegistered.current = true;
@@ -45,7 +45,7 @@ export const EditorPanel = () => {
       setTerminalOutput(`$ Running ${activeProject.title}...\n\nWaiting for execution...`);
       setIsRunning(true);
       try {
-        const response = await axios.post(`${import.meta.env.VITE_API_URL}/execute', {
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/execute`, {
           language: activeProject.language,
           content: activeProject.content
         });

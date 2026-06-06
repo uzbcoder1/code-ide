@@ -32,7 +32,7 @@ export const RegisterPage = () => {
     }
     
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/register', {
+      await axios.post(`${import.meta.env.VITE_API_URL}/register`, {
         username: formData.username,
         email: formData.email,
         first_name: formData.first_name,

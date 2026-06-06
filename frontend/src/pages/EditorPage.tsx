@@ -9,7 +9,7 @@ export const EditorPage = () => {
   const [isDraggingState, setIsDraggingState] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = (_e: React.MouseEvent) => {
     isDragging.current = true;
     setIsDraggingState(true);
     document.body.style.cursor = 'col-resize';
@@ -63,11 +63,11 @@ export const EditorPage = () => {
         />
         <div 
           className="bg-border-main hover:bg-primary z-10 transition-colors md:hidden h-2 cursor-row-resize flex items-center justify-center"
-          onTouchStart={(e) => {
+          onTouchStart={(_e) => {
             isDragging.current = true;
             setIsDraggingState(true);
           }}
-          onMouseDown={(e) => {
+          onMouseDown={(_e) => {
             isDragging.current = true;
             setIsDraggingState(true);
             document.body.style.cursor = 'row-resize';
