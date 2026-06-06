@@ -18,9 +18,11 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="CodeStudio API")
 
+frontend_urls = os.getenv("FRONTEND_URL", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=frontend_urls,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -253,3 +255,23 @@ def delete_admin_project(project_id: int, db: Session = Depends(get_db), current
     db.delete(project)
     db.commit()
     return {"status": "success"}
+
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
+from pathlib import Path
+
+# Serve Frontend SPA
+BASE_DIR = Path(__file__).resolve().parent.parent
+frontend_dist = os.path.join(BASE_DIR.parent, "frontend", "dist")
+
+if os.path.isdir(frontend_dist):
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
+
+    # Catch-all route to serve index.html for the SPA
+    @app.get("/{catchall:path}")
+    def serve_spa(catchall: str):
+        index_path = os.path.join(frontend_dist, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        return {"error": "Frontend build not found"}

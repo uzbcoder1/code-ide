@@ -45,7 +45,7 @@ export const EditorPanel = () => {
       setTerminalOutput(`$ Running ${activeProject.title}...\n\nWaiting for execution...`);
       setIsRunning(true);
       try {
-        const response = await axios.post('http://127.0.0.1:8000/execute', {
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/execute', {
           language: activeProject.language,
           content: activeProject.content
         });

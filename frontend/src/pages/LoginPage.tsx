@@ -23,14 +23,14 @@ export const LoginPage = () => {
       formData.append('password', password);
       
       // Request Token
-      const tokenRes = await axios.post('http://127.0.0.1:8000/login', formData, {
+      const tokenRes = await axios.post(`${import.meta.env.VITE_API_URL}/login', formData, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
       
       const token = tokenRes.data.access_token;
       
       // Get User Info
-      const userRes = await axios.get('http://127.0.0.1:8000/users/me', {
+      const userRes = await axios.get(`${import.meta.env.VITE_API_URL}/users/me', {
         headers: { Authorization: `Bearer ${token}` }
       });
       

@@ -10,7 +10,7 @@ export const AdminDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axios.get('http://127.0.0.1:8000/admin/stats', {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/stats', {
           headers: { Authorization: `Bearer ${token}` }
         });
         setStats(res.data);

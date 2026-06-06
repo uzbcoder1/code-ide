@@ -9,7 +9,7 @@ export const AdminProjects = () => {
 
   const fetchProjects = async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:8000/admin/projects', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/projects', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProjects(res.data);
@@ -25,7 +25,7 @@ export const AdminProjects = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this project?")) return;
     try {
-      await axios.delete(`http://127.0.0.1:8000/admin/projects/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/admin/projects/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchProjects();
