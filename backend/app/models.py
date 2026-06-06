@@ -12,6 +12,7 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     password_hash = Column(String)
+    role = Column(String, default="student") # admin, teacher, student
     created_at = Column(DateTime, default=datetime.utcnow)
 
     projects = relationship("Project", back_populates="owner")
@@ -43,8 +44,26 @@ class ExecutionHistory(Base):
     __tablename__ = "execution_history"
 
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"))
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True) # made nullable for guest execution
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    language = Column(String)
     status = Column(String)
     duration = Column(Integer) # in milliseconds
+    created_at = Column(DateTime, default=datetime.utcnow)
 
     project = relationship("Project", back_populates="executions")
+    user = relationship("User")
+
+class Language(Base):
+    __tablename__ = "languages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    extension = Column(String)
+    is_active = Column(Boolean, default=True)
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+
+    key = Column(String, primary_key=True, index=True)
+    value = Column(String)

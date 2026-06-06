@@ -7,6 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import subprocess
 import tempfile
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from . import models, schemas, auth, crud
 from .database import engine, get_db
@@ -48,13 +51,33 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = auth.get_user_by_username(db, form_data.username)
-    if not user or not auth.verify_password(form_data.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    admin_user = os.getenv("ADMIN_USERNAME", "admin")
+    admin_pass = os.getenv("ADMIN_PASSWORD", "admin123")
+    
+    if form_data.username == admin_user and form_data.password == admin_pass:
+        # Check if admin is in DB, if not, create
+        user = auth.get_user_by_username(db, admin_user)
+        if not user:
+            user = models.User(
+                first_name="System",
+                last_name="Admin",
+                username=admin_user,
+                email="admin@codestudio.com",
+                password_hash=auth.get_password_hash(admin_pass),
+                role="admin"
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+    else:
+        user = auth.get_user_by_username(db, form_data.username)
+        if not user or not auth.verify_password(form_data.password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+            
     access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = auth.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
@@ -102,12 +125,15 @@ def delete_project(project_id: int, db: Session = Depends(get_db), current_user:
 import tempfile
 import subprocess
 import os
+import time
+from datetime import datetime, timedelta
 
 @app.post("/execute", response_model=schemas.ExecuteResponse)
-def execute_code(request: schemas.ExecuteRequest):
+def execute_code(request: schemas.ExecuteRequest, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user_optional)):
     output = ""
     error = ""
     exit_code = 0
+    start_time = time.time()
     
     with tempfile.TemporaryDirectory() as temp_dir:
         if request.language == "python":
@@ -133,7 +159,6 @@ def execute_code(request: schemas.ExecuteRequest):
                 f.write(request.content)
                 
             try:
-                # Assuming node is installed
                 cmd = ["node", file_path] if request.language in ["javascript", "js"] else ["npx", "ts-node", file_path]
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
                 output = result.stdout
@@ -150,5 +175,81 @@ def execute_code(request: schemas.ExecuteRequest):
             error = f"Execution for language '{request.language}' is not implemented yet locally."
             exit_code = 1
             
+    duration_ms = int((time.time() - start_time) * 1000)
+    
+    # Save log to DB
+    new_log = models.ExecutionHistory(
+        user_id=current_user.id if current_user else None,
+        language=request.language,
+        status="success" if exit_code == 0 else "error",
+        duration=duration_ms
+    )
+    db.add(new_log)
+    
+    # Cleanup old logs (>30 days) randomly (1 in 10 chance to prevent slowing down every request)
+    import random
+    if random.random() < 0.1:
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        db.query(models.ExecutionHistory).filter(models.ExecutionHistory.created_at < thirty_days_ago).delete()
+    
+    db.commit()
+            
     return schemas.ExecuteResponse(output=output, error=error, exit_code=exit_code)
 
+# --- Admin Endpoints ---
+
+@app.get("/admin/stats")
+def get_admin_stats(db: Session = Depends(get_db), current_admin: models.User = Depends(auth.get_current_admin)):
+    users_count = db.query(models.User).count()
+    projects_count = db.query(models.Project).count()
+    logs_count = db.query(models.ExecutionHistory).count()
+    return {"users": users_count, "projects": projects_count, "logs": logs_count}
+
+@app.get("/admin/users")
+def get_admin_users(db: Session = Depends(get_db), current_admin: models.User = Depends(auth.get_current_admin)):
+    users = db.query(models.User).all()
+    return [{"id": u.id, "username": u.username, "email": u.email, "role": u.role, "created_at": u.created_at} for u in users]
+
+@app.get("/admin/logs")
+def get_admin_logs(db: Session = Depends(get_db), current_admin: models.User = Depends(auth.get_current_admin)):
+    logs = db.query(models.ExecutionHistory).order_by(models.ExecutionHistory.created_at.desc()).limit(100).all()
+    result = []
+    for log in logs:
+        username = "Guest"
+        if log.user:
+            username = log.user.username
+        result.append({
+            "id": log.id,
+            "username": username,
+            "language": log.language,
+            "status": log.status,
+            "duration": log.duration,
+            "created_at": log.created_at
+        })
+    return result
+
+@app.get("/admin/projects")
+def get_admin_projects(db: Session = Depends(get_db), current_admin: models.User = Depends(auth.get_current_admin)):
+    projects = db.query(models.Project).all()
+    result = []
+    for p in projects:
+        owner = "Guest"
+        if p.owner:
+            owner = p.owner.username
+        result.append({
+            "id": p.id,
+            "title": p.title,
+            "language": p.language,
+            "owner": owner,
+            "last_modified": p.last_modified
+        })
+    return result
+
+@app.delete("/admin/projects/{project_id}")
+def delete_admin_project(project_id: int, db: Session = Depends(get_db), current_admin: models.User = Depends(auth.get_current_admin)):
+    project = db.query(models.Project).filter(models.Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    db.delete(project)
+    db.commit()
+    return {"status": "success"}

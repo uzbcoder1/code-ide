@@ -9,7 +9,7 @@ import { emmetHTML } from 'emmet-monaco-es';
 
 export const EditorPanel = () => {
   const { projects, activeProjectId, updateProjectContent, setTerminalOutput, theme, toggleTheme } = useStore();
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const [toastMessage, setToastMessage] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -99,10 +99,24 @@ export const EditorPanel = () => {
           <button onClick={toggleTheme} className="text-text-muted hover:text-text-main transition-colors" title="Toggle Theme">
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-          <Link to="/login" className="text-text-muted hover:text-text-main transition-colors flex items-center gap-1" title="Account">
-            <UserCircle size={18} />
-            {user && <span className="text-xs">{user.first_name || user.username}</span>}
-          </Link>
+          {user ? (
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-primary mr-2">{user.username}</span>
+              {user.role === 'admin' && (
+                <Link to="/admin" className="text-xs bg-primary/20 text-primary px-2 py-1 rounded hover:bg-primary/30">
+                  Admin Panel
+                </Link>
+              )}
+              <button onClick={logout} className="text-xs text-text-muted hover:text-red-500 transition-colors">
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" className="text-text-muted hover:text-text-main transition-colors flex items-center gap-1" title="Account">
+              <UserCircle size={18} />
+              <span className="text-xs">Login</span>
+            </Link>
+          )}
           <button onClick={() => setIsSettingsOpen(true)} className="text-text-muted hover:text-text-main transition-colors" title="Settings">
             <Settings size={18} />
           </button>

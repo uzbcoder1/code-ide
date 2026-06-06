@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     last_name: str
     username: str
     email: EmailStr
+    role: str = "student"
 
 class UserCreate(UserBase):
     password: str
