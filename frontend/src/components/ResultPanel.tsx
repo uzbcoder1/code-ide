@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { RefreshCw, ExternalLink, Monitor, Tablet, Smartphone } from 'lucide-react';
 
-export const ResultPanel = () => {
+export const ResultPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
   const { projects, activeProjectId, terminalOutput } = useStore();
   const activeProject = projects.find(p => p.id === activeProjectId);
   const [srcDoc, setSrcDoc] = useState('');
@@ -51,17 +51,19 @@ export const ResultPanel = () => {
           <Monitor size={16} /> Result
         </h2>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-bg-hover p-1 rounded border border-border-main">
-            <button onClick={() => setPreviewMode('desktop')} className={`p-1 rounded ${previewMode === 'desktop' ? 'bg-border-main text-text-main' : 'text-text-muted hover:text-text-main'}`}>
-              <Monitor size={14} />
-            </button>
-            <button onClick={() => setPreviewMode('tablet')} className={`p-1 rounded ${previewMode === 'tablet' ? 'bg-border-main text-text-main' : 'text-text-muted hover:text-text-main'}`}>
-              <Tablet size={14} />
-            </button>
-            <button onClick={() => setPreviewMode('mobile')} className={`p-1 rounded ${previewMode === 'mobile' ? 'bg-border-main text-text-main' : 'text-text-muted hover:text-text-main'}`}>
-              <Smartphone size={14} />
-            </button>
-          </div>
+          {!isMobile && (
+            <div className="flex items-center gap-1 bg-bg-hover p-1 rounded border border-border-main">
+              <button onClick={() => setPreviewMode('desktop')} className={`p-1 rounded ${previewMode === 'desktop' ? 'bg-border-main text-text-main' : 'text-text-muted hover:text-text-main'}`}>
+                <Monitor size={14} />
+              </button>
+              <button onClick={() => setPreviewMode('tablet')} className={`p-1 rounded ${previewMode === 'tablet' ? 'bg-border-main text-text-main' : 'text-text-muted hover:text-text-main'}`}>
+                <Tablet size={14} />
+              </button>
+              <button onClick={() => setPreviewMode('mobile')} className={`p-1 rounded ${previewMode === 'mobile' ? 'bg-border-main text-text-main' : 'text-text-muted hover:text-text-main'}`}>
+                <Smartphone size={14} />
+              </button>
+            </div>
+          )}
           <button className="text-text-muted hover:text-text-main transition-colors" onClick={() => setSrcDoc(activeProject.content)}>
             <RefreshCw size={16} />
           </button>

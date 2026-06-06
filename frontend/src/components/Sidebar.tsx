@@ -24,11 +24,13 @@ const getLanguageFromExtension = (filename: string) => {
   }
 };
 
-export const Sidebar = () => {
+export const Sidebar = ({ isMobile = false }: { isMobile?: boolean }) => {
   const { projects, activeProjectId, setActiveProject, deleteProject, addProject, isSidebarOpen, toggleSidebar } = useStore();
   const [isCreatingFile, setIsCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const isOpen = isMobile || isSidebarOpen;
 
   useEffect(() => {
     if (isCreatingFile && inputRef.current) {
@@ -69,29 +71,31 @@ export const Sidebar = () => {
   return (
     <>
       {/* Mobile overlay backdrop */}
-      {isSidebarOpen && (
+      {isSidebarOpen && !isMobile && (
         <div 
           className="md:hidden fixed inset-0 bg-black/50 z-30"
           onClick={toggleSidebar}
         />
       )}
       <div className={`bg-bg-surface h-full flex flex-col border-r border-border-main text-sm shrink-0 transition-all duration-300 absolute md:relative z-40 ${
-        isSidebarOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-14'
+        isMobile ? 'w-full translate-x-0 !relative' : (isSidebarOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-14')
       }`}>
         <div className="p-4 flex items-center justify-between border-b border-border-main">
-          {isSidebarOpen && (
+          {isOpen && (
             <div className="flex items-center gap-2 font-bold text-lg text-text-main whitespace-nowrap overflow-hidden">
               <FileCode className="text-primary" />
               CodeStudio
             </div>
           )}
-          <button onClick={toggleSidebar} className="text-text-muted hover:text-text-main transition-colors mx-auto">
-            <Menu size={20} />
-          </button>
+          {!isMobile && (
+            <button onClick={toggleSidebar} className="text-text-muted hover:text-text-main transition-colors mx-auto">
+              <Menu size={20} />
+            </button>
+          )}
         </div>
 
       <div className="p-2 flex-1 overflow-hidden flex flex-col">
-        {isSidebarOpen && (
+        {isOpen && (
           <>
             <div className="flex items-center justify-between mb-4 px-2 mt-2">
               <h2 className="text-text-muted font-semibold text-xs uppercase tracking-wider">My Projects</h2>
@@ -116,7 +120,7 @@ export const Sidebar = () => {
         )}
 
         <div className="flex flex-col gap-1 overflow-y-auto flex-1 pb-4">
-          {isCreatingFile && isSidebarOpen && (
+          {isCreatingFile && isOpen && (
             <div className="flex items-center gap-2 p-2 mx-2 rounded bg-border-main text-text-main">
               <FileCode size={16} className="text-text-muted shrink-0" />
               <input
@@ -137,11 +141,11 @@ export const Sidebar = () => {
               key={project.id}
               onClick={() => setActiveProject(project.id)}
               className={`flex items-center p-2 rounded cursor-pointer group transition-colors ${
-                isSidebarOpen ? 'justify-between mx-2' : 'justify-center mx-1'
+                isOpen ? 'justify-between mx-2' : 'justify-center mx-1'
               } ${
                 activeProjectId === project.id ? 'bg-border-main text-text-main' : 'text-text-muted hover:bg-bg-hover'
               }`}
-              title={!isSidebarOpen ? project.title : undefined}
+              title={!isOpen ? project.title : undefined}
             >
               <div className="flex items-center gap-2 truncate">
                 <FileCode size={16} className={`shrink-0 ${
@@ -151,15 +155,15 @@ export const Sidebar = () => {
                   project.language === 'java' || project.language === 'cpp' || project.language === 'csharp' ? 'text-purple-500' :
                   'text-blue-500'
                 }`} />
-                {isSidebarOpen && <span className="truncate">{project.title}</span>}
+                {isOpen && <span className="truncate">{project.title}</span>}
               </div>
-              {isSidebarOpen && (
+              {isOpen && (
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteProject(project.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity shrink-0"
+                  className={`${isMobile ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 hover:text-red-500 transition-opacity shrink-0`}
                 >
                   <Trash2 size={14} />
                 </button>

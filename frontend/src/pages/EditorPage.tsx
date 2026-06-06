@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { EditorPanel } from '../components/EditorPanel';
 import { ResultPanel } from '../components/ResultPanel';
+import { MobileLayout } from '../components/mobile/MobileLayout';
 
 export const EditorPage = () => {
   const [editorWidth, setEditorWidth] = useState(60); // percentage
@@ -32,15 +33,27 @@ export const EditorPage = () => {
     document.body.style.cursor = 'default';
   };
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
   useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     
     return () => {
+      window.removeEventListener('resize', handleResize);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, []);
+
+  if (isMobile) {
+    return <MobileLayout />;
+  }
 
   return (
     <div className="flex flex-row h-screen bg-bg-main overflow-hidden text-text-main transition-colors duration-200 relative">

@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { emmetHTML } from 'emmet-monaco-es';
 
-export const EditorPanel = () => {
+export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
   const { projects, activeProjectId, updateProjectContent, setTerminalOutput, theme, toggleTheme } = useStore();
   const { user, logout } = useAuthStore();
   const [toastMessage, setToastMessage] = useState('');
@@ -92,34 +92,38 @@ export const EditorPanel = () => {
           <button onClick={handleSave} className="flex items-center gap-1 px-3 py-1.5 text-sm text-text-muted hover:text-text-main transition-colors">
             <Save size={16} /> Save
           </button>
-          <button onClick={handleRun} disabled={isRunning} className={`flex items-center gap-1 px-4 py-1.5 text-white rounded text-sm transition-colors font-semibold shadow-sm ${isRunning ? 'bg-primary/50 cursor-not-allowed' : 'bg-primary hover:bg-primary-hover'}`}>
-            <Play size={16} fill="currentColor" /> {isRunning ? 'Running...' : 'Run'}
-          </button>
-          <div className="w-px h-6 bg-border-main mx-1"></div>
-          <button onClick={toggleTheme} className="text-text-muted hover:text-text-main transition-colors" title="Toggle Theme">
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-          {user ? (
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-bold text-primary mr-2">{user.username}</span>
-              {user.role === 'admin' && (
-                <Link to="/admin" className="text-xs bg-primary/20 text-primary px-2 py-1 rounded hover:bg-primary/30">
-                  Admin Panel
+          {!isMobile && (
+            <>
+              <button onClick={handleRun} disabled={isRunning} className={`flex items-center gap-1 px-4 py-1.5 text-white rounded text-sm transition-colors font-semibold shadow-sm ${isRunning ? 'bg-primary/50 cursor-not-allowed' : 'bg-primary hover:bg-primary-hover'}`}>
+                <Play size={16} fill="currentColor" /> {isRunning ? 'Running...' : 'Run'}
+              </button>
+              <div className="w-px h-6 bg-border-main mx-1"></div>
+              <button onClick={toggleTheme} className="text-text-muted hover:text-text-main transition-colors" title="Toggle Theme">
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              {user ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-primary mr-2">{user.username}</span>
+                  {user.role === 'admin' && (
+                    <Link to="/admin" className="text-xs bg-primary/20 text-primary px-2 py-1 rounded hover:bg-primary/30">
+                      Admin Panel
+                    </Link>
+                  )}
+                  <button onClick={logout} className="text-xs text-text-muted hover:text-red-500 transition-colors">
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <Link to="/login" className="text-text-muted hover:text-text-main transition-colors flex items-center gap-1" title="Account">
+                  <UserCircle size={18} />
+                  <span className="text-xs">Login</span>
                 </Link>
               )}
-              <button onClick={logout} className="text-xs text-text-muted hover:text-red-500 transition-colors">
-                Logout
+              <button onClick={() => setIsSettingsOpen(true)} className="text-text-muted hover:text-text-main transition-colors" title="Settings">
+                <Settings size={18} />
               </button>
-            </div>
-          ) : (
-            <Link to="/login" className="text-text-muted hover:text-text-main transition-colors flex items-center gap-1" title="Account">
-              <UserCircle size={18} />
-              <span className="text-xs">Login</span>
-            </Link>
+            </>
           )}
-          <button onClick={() => setIsSettingsOpen(true)} className="text-text-muted hover:text-text-main transition-colors" title="Settings">
-            <Settings size={18} />
-          </button>
         </div>
       </div>
 
