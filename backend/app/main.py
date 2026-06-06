@@ -173,6 +173,56 @@ def execute_code(request: schemas.ExecuteRequest, db: Session = Depends(get_db),
                 error = str(e)
                 exit_code = -1
                 
+        elif request.language in ["cpp", "c", "c++", "cc"]:
+            file_path = os.path.join(temp_dir, "main.cpp")
+            exe_path = os.path.join(temp_dir, "main.out")
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(request.content)
+                
+            try:
+                compile_res = subprocess.run(["g++", file_path, "-o", exe_path], capture_output=True, text=True, timeout=10)
+                if compile_res.returncode != 0:
+                    error = compile_res.stderr
+                    exit_code = compile_res.returncode
+                else:
+                    run_res = subprocess.run([exe_path], capture_output=True, text=True, timeout=10)
+                    output = run_res.stdout
+                    error = run_res.stderr
+                    exit_code = run_res.returncode
+            except subprocess.TimeoutExpired:
+                error = "Execution timed out (10s limit)"
+                exit_code = -1
+            except Exception as e:
+                error = str(e)
+                exit_code = -1
+                
+        elif request.language == "java":
+            import re
+            # Extract public class name for the file name, default to Main
+            match = re.search(r'public\s+class\s+(\w+)', request.content)
+            class_name = match.group(1) if match else "Main"
+            file_path = os.path.join(temp_dir, f"{class_name}.java")
+            
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(request.content)
+                
+            try:
+                compile_res = subprocess.run(["javac", file_path], capture_output=True, text=True, timeout=10)
+                if compile_res.returncode != 0:
+                    error = compile_res.stderr
+                    exit_code = compile_res.returncode
+                else:
+                    run_res = subprocess.run(["java", "-cp", temp_dir, class_name], capture_output=True, text=True, timeout=10)
+                    output = run_res.stdout
+                    error = run_res.stderr
+                    exit_code = run_res.returncode
+            except subprocess.TimeoutExpired:
+                error = "Execution timed out (10s limit)"
+                exit_code = -1
+            except Exception as e:
+                error = str(e)
+                exit_code = -1
+                
         else:
             error = f"Execution for language '{request.language}' is not implemented yet locally."
             exit_code = 1
