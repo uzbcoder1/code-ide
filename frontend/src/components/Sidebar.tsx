@@ -48,11 +48,38 @@ export const Sidebar = ({ isMobile = false }: { isMobile?: boolean }) => {
     const filename = newFileName.trim();
     const language = getLanguageFromExtension(filename);
     
+    let content = '';
+    if (language === 'html') {
+      content = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${filename}</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      padding: 20px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>Hello from ${filename}!</h1>
+  <p>Start coding your HTML here...</p>
+</body>
+</html>`;
+    } else if (language === 'python') {
+      content = `print("Hello from ${filename}!")\n`;
+    } else if (language === 'javascript' || language === 'typescript') {
+      content = `console.log("Hello from ${filename}!");\n`;
+    }
+    
     addProject({
       id: Date.now().toString(),
       title: filename,
       language,
-      content: '',
+      content,
       lastModified: new Date().toISOString()
     });
     
