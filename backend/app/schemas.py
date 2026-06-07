@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List
 from datetime import datetime
 
@@ -7,13 +7,40 @@ class UserBase(BaseModel):
     last_name: str
     username: str
     email: EmailStr
-    role: str = "student"
 
 class UserCreate(UserBase):
+    """Foydalanuvchi registratsiya schemasi — role fieldi YO'Q (xavfsizlik)."""
     password: str
 
-class UserResponse(UserBase):
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Parol kamida 8 belgidan iborat bo'lishi kerak")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Parolda kamida 1 ta raqam bo'lishi kerak")
+        if not any(c.isalpha() for c in v):
+            raise ValueError("Parolda kamida 1 ta harf bo'lishi kerak")
+        return v
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        if len(v) < 3:
+            raise ValueError("Username kamida 3 belgidan iborat bo'lishi kerak")
+        if len(v) > 30:
+            raise ValueError("Username 30 belgidan oshmasligi kerak")
+        if not v.isalnum() and "_" not in v:
+            raise ValueError("Username faqat harflar, raqamlar va '_' dan iborat bo'lishi kerak")
+        return v
+
+class UserResponse(BaseModel):
     id: int
+    first_name: str
+    last_name: str
+    username: str
+    email: EmailStr
+    role: str = "student"
     created_at: datetime
 
     class Config:

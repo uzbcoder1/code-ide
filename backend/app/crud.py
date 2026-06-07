@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from datetime import datetime, timezone
 from . import models, schemas
 
 def get_projects(db: Session, user_id: int, skip: int = 0, limit: int = 100):
@@ -36,8 +37,7 @@ def update_project_file(db: Session, project_id: int, content: str):
     # Update last modified
     db_project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if db_project:
-        from datetime import datetime
-        db_project.last_modified = datetime.utcnow()
+        db_project.last_modified = datetime.now(timezone.utc)
         db.commit()
 
     return db_file

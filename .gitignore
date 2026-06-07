@@ -11,6 +11,12 @@ __pycache__/
 # Environment variables
 .env
 
+# Database
+*.db
+
 # Build outputs
 dist/
 build/
+
+# One-off scripts
+replace.py

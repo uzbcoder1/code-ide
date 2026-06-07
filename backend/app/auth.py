@@ -1,5 +1,6 @@
 import bcrypt
-from datetime import datetime, timedelta
+import logging
+from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from typing import Optional
 import os
@@ -9,9 +10,19 @@ from sqlalchemy.orm import Session
 from .database import get_db
 from . import models, schemas
 
-SECRET_KEY = os.getenv("CODE_STUDIO_SECRET_KEY", "dev-only-change-me")
+logger = logging.getLogger("codestudio.auth")
+
+# Secret key — hostingda environment variable orqali sozlanadi
+# Lokal dev uchun fallback qiymat ishlatiladi (xavfsiz emas, lekin barqaror)
+SECRET_KEY = os.getenv("CODE_STUDIO_SECRET_KEY", "local-dev-key-do-not-use-in-production")
+if SECRET_KEY == "local-dev-key-do-not-use-in-production":
+    logger.warning(
+        "⚠️  CODE_STUDIO_SECRET_KEY sozlanmagan! Lokal dev kalit ishlatilmoqda. "
+        "Production uchun hosting environment variables'da kuchli kalit belgilang."
+    )
+
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 1 week
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 kun (avval 1 hafta edi)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -24,9 +35,9 @@ def get_password_hash(password):
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=15)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

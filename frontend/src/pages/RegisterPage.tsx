@@ -16,6 +16,14 @@ export const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Parol validatsiya funksiyalari
+  const passwordChecks = {
+    minLength: formData.password.length >= 8,
+    hasLetter: /[a-zA-Z]/.test(formData.password),
+    hasDigit: /\d/.test(formData.password),
+  };
+  const isPasswordValid = passwordChecks.minLength && passwordChecks.hasLetter && passwordChecks.hasDigit;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -25,8 +33,20 @@ export const RegisterPage = () => {
     setLoading(true);
     setError('');
     
+    if (!isPasswordValid) {
+      setError('Parol kamida 8 belgi, 1 harf va 1 raqamdan iborat bo\'lishi kerak');
+      setLoading(false);
+      return;
+    }
+    
     if (formData.password !== formData.confirm_password) {
       setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+    
+    if (formData.username.length < 3) {
+      setError('Username kamida 3 belgidan iborat bo\'lishi kerak');
       setLoading(false);
       return;
     }
@@ -131,6 +151,26 @@ export const RegisterPage = () => {
               required
             />
           </div>
+          
+          {/* Parol kuch ko'rsatkichi */}
+          {formData.password.length > 0 && (
+            <div className="col-span-2 px-1">
+              <div className="flex flex-col gap-1 text-xs">
+                <div className={`flex items-center gap-1 ${passwordChecks.minLength ? 'text-green-500' : 'text-red-500'}`}>
+                  <span>{passwordChecks.minLength ? '✓' : '✗'}</span>
+                  <span>Kamida 8 belgi</span>
+                </div>
+                <div className={`flex items-center gap-1 ${passwordChecks.hasLetter ? 'text-green-500' : 'text-red-500'}`}>
+                  <span>{passwordChecks.hasLetter ? '✓' : '✗'}</span>
+                  <span>Kamida 1 ta harf</span>
+                </div>
+                <div className={`flex items-center gap-1 ${passwordChecks.hasDigit ? 'text-green-500' : 'text-red-500'}`}>
+                  <span>{passwordChecks.hasDigit ? '✓' : '✗'}</span>
+                  <span>Kamida 1 ta raqam</span>
+                </div>
+              </div>
+            </div>
+          )}
           
           <button 
             type="submit" 

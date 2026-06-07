@@ -1,22 +1,45 @@
+import re
+import random
+import logging
+import time
+import tempfile
+from datetime import datetime, timedelta, timezone
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from datetime import timedelta
 from typing import List
 from fastapi.middleware.cors import CORSMiddleware
-import subprocess
-import tempfile
 import os
 from dotenv import load_dotenv
+
+# Rate limiting
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from starlette.requests import Request
 
 load_dotenv()
 
 from . import models, schemas, auth, crud
 from .database import engine, get_db
+from .sandbox import execute_code
+
+# Logging sozlash
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logger = logging.getLogger("codestudio")
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="CodeStudio API")
+
+# Rate Limiter
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 frontend_urls = os.getenv("FRONTEND_URL", "http://localhost:5173,http://127.0.0.1:5173").split(",")
 
@@ -29,7 +52,8 @@ app.add_middleware(
 )
 
 @app.post("/register", response_model=schemas.UserResponse)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def register(request: Request, user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = auth.get_user_by_username(db, username=user.username)
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
@@ -44,36 +68,44 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
         last_name=user.last_name,
         username=user.username,
         email=user.email,
-        password_hash=hashed_password
+        password_hash=hashed_password,
+        role="student",  # Role har doim "student" — foydalanuvchi o'zi belgilay olmaydi
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    logger.info("Yangi foydalanuvchi ro'yxatdan o'tdi: %s", user.username)
     return new_user
 
 @app.post("/login", response_model=schemas.Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     admin_user = os.getenv("ADMIN_USERNAME", "admin")
-    admin_pass = os.getenv("ADMIN_PASSWORD", "admin123")
+    admin_pass = os.getenv("ADMIN_PASSWORD", "Str0ng@Adm1n#2026!")
+    
+    if admin_pass == "Str0ng@Adm1n#2026!":
+        logger.warning("ADMIN_PASSWORD sozlanmagan — default parol ishlatilmoqda. Hostingda environment variable belgilang.")
     
     if form_data.username == admin_user and form_data.password == admin_pass:
-        # Check if admin is in DB, if not, create
+        # Admin foydalanuvchini bazadan olish yoki yaratish
         user = auth.get_user_by_username(db, admin_user)
         if not user:
             user = models.User(
                 first_name="System",
                 last_name="Admin",
                 username=admin_user,
-                email="admin@codestudio.com",
+                email=os.getenv("ADMIN_EMAIL", "admin@codestudio.com"),
                 password_hash=auth.get_password_hash(admin_pass),
                 role="admin"
             )
             db.add(user)
             db.commit()
             db.refresh(user)
+            logger.info("Admin foydalanuvchi yaratildi: %s", admin_user)
     else:
         user = auth.get_user_by_username(db, form_data.username)
         if not user or not auth.verify_password(form_data.password, user.password_hash):
+            logger.warning("Muvaffaqiyatsiz login urinishi: %s", form_data.username)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
@@ -84,6 +116,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     access_token = auth.create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
+    logger.info("Foydalanuvchi tizimga kirdi: %s", user.username)
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/users/me", response_model=schemas.UserResponse)
@@ -124,129 +157,31 @@ def delete_project(project_id: int, db: Session = Depends(get_db), current_user:
         raise HTTPException(status_code=404, detail="Project not found")
     return {"status": "success"}
 
-import tempfile
-import subprocess
-import os
-import time
-from datetime import datetime, timedelta
-
 @app.post("/execute", response_model=schemas.ExecuteResponse)
-def execute_code(request: schemas.ExecuteRequest, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user_optional)):
-    output = ""
-    error = ""
-    exit_code = 0
-    start_time = time.time()
+@limiter.limit("20/minute")
+def execute_code_endpoint(request: Request, payload: schemas.ExecuteRequest, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user_optional)):
+    """Kodni xavfsiz sandbox muhitida bajarish."""
     
-    with tempfile.TemporaryDirectory() as temp_dir:
-        if request.language == "python":
-            file_path = os.path.join(temp_dir, "main.py")
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(request.content)
-            
-            try:
-                result = subprocess.run(["python", file_path], capture_output=True, text=True, timeout=10)
-                output = result.stdout
-                error = result.stderr
-                exit_code = result.returncode
-            except subprocess.TimeoutExpired:
-                error = "Execution timed out (10s limit)"
-                exit_code = -1
-            except Exception as e:
-                error = str(e)
-                exit_code = -1
-                
-        elif request.language in ["javascript", "typescript", "js"]:
-            file_path = os.path.join(temp_dir, f"main.{'ts' if request.language == 'typescript' else 'js'}")
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(request.content)
-                
-            try:
-                cmd = ["node", file_path] if request.language in ["javascript", "js"] else ["npx", "ts-node", file_path]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-                output = result.stdout
-                error = result.stderr
-                exit_code = result.returncode
-            except subprocess.TimeoutExpired:
-                error = "Execution timed out (10s limit)"
-                exit_code = -1
-            except Exception as e:
-                error = str(e)
-                exit_code = -1
-                
-        elif request.language in ["cpp", "c", "c++", "cc"]:
-            file_path = os.path.join(temp_dir, "main.cpp")
-            exe_path = os.path.join(temp_dir, "main.out")
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(request.content)
-                
-            try:
-                compile_res = subprocess.run(["g++", file_path, "-o", exe_path], capture_output=True, text=True, timeout=10)
-                if compile_res.returncode != 0:
-                    error = compile_res.stderr
-                    exit_code = compile_res.returncode
-                else:
-                    run_res = subprocess.run([exe_path], capture_output=True, text=True, timeout=10)
-                    output = run_res.stdout
-                    error = run_res.stderr
-                    exit_code = run_res.returncode
-            except subprocess.TimeoutExpired:
-                error = "Execution timed out (10s limit)"
-                exit_code = -1
-            except Exception as e:
-                error = str(e)
-                exit_code = -1
-                
-        elif request.language == "java":
-            import re
-            # Extract public class name for the file name, default to Main
-            match = re.search(r'public\s+class\s+(\w+)', request.content)
-            class_name = match.group(1) if match else "Main"
-            file_path = os.path.join(temp_dir, f"{class_name}.java")
-            
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(request.content)
-                
-            try:
-                compile_res = subprocess.run(["javac", file_path], capture_output=True, text=True, timeout=10)
-                if compile_res.returncode != 0:
-                    error = compile_res.stderr
-                    exit_code = compile_res.returncode
-                else:
-                    run_res = subprocess.run(["java", "-cp", temp_dir, class_name], capture_output=True, text=True, timeout=10)
-                    output = run_res.stdout
-                    error = run_res.stderr
-                    exit_code = run_res.returncode
-            except subprocess.TimeoutExpired:
-                error = "Execution timed out (10s limit)"
-                exit_code = -1
-            except Exception as e:
-                error = str(e)
-                exit_code = -1
-                
-        else:
-            error = f"Execution for language '{request.language}' is not implemented yet locally."
-            exit_code = 1
-            
-    duration_ms = int((time.time() - start_time) * 1000)
+    logger.info(
+        "Kod bajarish so'rovi: til=%s, foydalanuvchi=%s",
+        payload.language,
+        current_user.username if current_user else "Guest",
+    )
     
-    # Save log to DB
+    # Sandbox orqali kodni bajarish
+    result = execute_code(payload.language, payload.content)
+
+    # Natijani bazaga yozish
     new_log = models.ExecutionHistory(
         user_id=current_user.id if current_user else None,
-        language=request.language,
-        status="success" if exit_code == 0 else "error",
-        duration=duration_ms
+        language=payload.language,
+        status="success" if result.exit_code == 0 else "error",
+        duration=result.duration_ms,
     )
     db.add(new_log)
-    
-    # Cleanup old logs (>30 days) randomly (1 in 10 chance to prevent slowing down every request)
-    import random
-    if random.random() < 0.1:
-        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-        db.query(models.ExecutionHistory).filter(models.ExecutionHistory.created_at < thirty_days_ago).delete()
-    
     db.commit()
             
-    return schemas.ExecuteResponse(output=output, error=error, exit_code=exit_code)
+    return schemas.ExecuteResponse(output=result.output, error=result.error, exit_code=result.exit_code)
 
 # --- Admin Endpoints ---
 
@@ -302,13 +237,13 @@ def delete_admin_project(project_id: int, db: Session = Depends(get_db), current
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    logger.info("Admin loyihani o'chirdi: id=%d, admin=%s", project_id, current_admin.username)
     db.delete(project)
     db.commit()
     return {"status": "success"}
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-import os
 from pathlib import Path
 
 # Serve Frontend SPA

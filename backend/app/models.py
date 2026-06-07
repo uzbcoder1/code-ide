@@ -1,7 +1,13 @@
 from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from .database import Base
+
+
+def _utcnow():
+    """Timezone-aware UTC vaqtini qaytarish."""
+    return datetime.now(timezone.utc)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -13,7 +19,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     password_hash = Column(String)
     role = Column(String, default="student") # admin, teacher, student
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
     projects = relationship("Project", back_populates="owner")
 
@@ -24,7 +30,7 @@ class Project(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     title = Column(String, index=True)
     language = Column(String, index=True)
-    last_modified = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_modified = Column(DateTime, default=_utcnow, onupdate=_utcnow)
 
     owner = relationship("User", back_populates="projects")
     files = relationship("ProjectFile", back_populates="project", cascade="all, delete-orphan")
@@ -49,7 +55,7 @@ class ExecutionHistory(Base):
     language = Column(String)
     status = Column(String)
     duration = Column(Integer) # in milliseconds
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=_utcnow)
 
     project = relationship("Project", back_populates="executions")
     user = relationship("User")
