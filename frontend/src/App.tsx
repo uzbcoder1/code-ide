@@ -9,7 +9,20 @@ import { AdminProjects } from './pages/admin/AdminProjects';
 import { AdminLogs } from './pages/admin/AdminLogs';
 import { AdminSettings } from './pages/admin/AdminSettings';
 
+import { useEffect } from 'react';
+import { useAuthStore } from './store/useAuthStore';
+
 function App() {
+  const { logout } = useAuthStore();
+
+  useEffect(() => {
+    const handleAuthError = () => {
+      logout();
+    };
+    window.addEventListener('auth-error', handleAuthError);
+    return () => window.removeEventListener('auth-error', handleAuthError);
+  }, [logout]);
+
   return (
     <Router>
       <Routes>
