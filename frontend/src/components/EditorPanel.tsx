@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import { useStore } from '../store/useStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -13,15 +13,20 @@ export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
   const [toastMessage, setToastMessage] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
   
   const emmetRegistered = useRef(false);
   const activeProject = projects.find(p => p.id === activeProjectId);
 
-  const handleEditorDidMount = (_editor: any, monaco: any) => {
+  const handleEditorDidMount = (editor: any, monaco: any) => {
     if (!emmetRegistered.current) {
       emmetHTML(monaco);
       emmetRegistered.current = true;
     }
+    // Cursor pozitsiyasini kuzatish
+    editor.onDidChangeCursorPosition((e: any) => {
+      setCursorPosition({ line: e.position.lineNumber, column: e.position.column });
+    });
   };
 
   const handleEditorChange = (value: string | undefined) => {
@@ -154,7 +159,7 @@ export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
       {/* Status Bar */}
       <div className="h-6 bg-bg-main border-t border-border-main flex items-center px-4 text-xs text-text-muted justify-between">
         <div className="flex gap-4">
-          <span>Ln 1, Col 1</span>
+          <span>Ln {cursorPosition.line}, Col {cursorPosition.column}</span>
           <span>Spaces: 2</span>
           <span>UTF-8</span>
           <span className="uppercase">{activeProject.language}</span>

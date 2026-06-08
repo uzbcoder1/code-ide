@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useStore } from '../store/useStore';
 import { RefreshCw, ExternalLink, Monitor, Tablet, Smartphone } from 'lucide-react';
 
@@ -67,7 +67,17 @@ export const ResultPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
           <button className="text-text-muted hover:text-text-main transition-colors" onClick={() => setSrcDoc(activeProject.content)}>
             <RefreshCw size={16} />
           </button>
-          <button className="text-text-muted hover:text-text-main transition-colors">
+          <button 
+            className="text-text-muted hover:text-text-main transition-colors"
+            onClick={() => {
+              const newWindow = window.open('', '_blank');
+              if (newWindow) {
+                newWindow.document.write(activeProject.content);
+                newWindow.document.close();
+              }
+            }}
+            title="Open in new tab"
+          >
             <ExternalLink size={16} />
           </button>
         </div>
@@ -77,7 +87,8 @@ export const ResultPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
           <iframe 
             srcDoc={srcDoc}
             title="output"
-            sandbox="allow-scripts"
+            sandbox="allow-scripts allow-modals"
+            referrerPolicy="no-referrer"
             width="100%"
             height="100%"
             className="border-none"

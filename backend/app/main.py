@@ -159,13 +159,13 @@ def delete_project(project_id: int, db: Session = Depends(get_db), current_user:
 
 @app.post("/execute", response_model=schemas.ExecuteResponse)
 @limiter.limit("20/minute")
-def execute_code_endpoint(request: Request, payload: schemas.ExecuteRequest, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user_optional)):
-    """Kodni xavfsiz sandbox muhitida bajarish."""
+def execute_code_endpoint(request: Request, payload: schemas.ExecuteRequest, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """Kodni xavfsiz sandbox muhitida bajarish. Faqat tizimga kirgan foydalanuvchilar uchun."""
     
     logger.info(
         "Kod bajarish so'rovi: til=%s, foydalanuvchi=%s",
         payload.language,
-        current_user.username if current_user else "Guest",
+        current_user.username,
     )
     
     # Sandbox orqali kodni bajarish
@@ -173,7 +173,7 @@ def execute_code_endpoint(request: Request, payload: schemas.ExecuteRequest, db:
 
     # Natijani bazaga yozish
     new_log = models.ExecutionHistory(
-        user_id=current_user.id if current_user else None,
+        user_id=current_user.id,
         language=payload.language,
         status="success" if result.exit_code == 0 else "error",
         duration=result.duration_ms,

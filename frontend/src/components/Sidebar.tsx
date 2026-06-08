@@ -28,6 +28,7 @@ export const Sidebar = ({ isMobile = false }: { isMobile?: boolean }) => {
   const { projects, activeProjectId, setActiveProject, deleteProject, addProject, isSidebarOpen, toggleSidebar } = useStore();
   const [isCreatingFile, setIsCreatingFile] = useState(false);
   const [newFileName, setNewFileName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isOpen = isMobile || isSidebarOpen;
@@ -140,6 +141,8 @@ export const Sidebar = ({ isMobile = false }: { isMobile?: boolean }) => {
               <input 
                 type="text" 
                 placeholder="Search files..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-bg-hover text-text-main rounded pl-8 pr-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary text-xs"
               />
             </div>
@@ -163,7 +166,9 @@ export const Sidebar = ({ isMobile = false }: { isMobile?: boolean }) => {
             </div>
           )}
 
-          {projects.map((project) => (
+          {projects
+            .filter(p => !searchQuery || p.title.toLowerCase().includes(searchQuery.toLowerCase()))
+            .map((project) => (
             <div 
               key={project.id}
               onClick={() => setActiveProject(project.id)}

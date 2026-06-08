@@ -62,8 +62,8 @@ export const EditorPage = () => {
         <div 
           className="flex flex-col min-w-0"
           style={{ 
-            width: window.innerWidth >= 768 ? `${editorWidth}%` : '100%',
-            height: window.innerWidth < 768 ? `${editorWidth}%` : '100%'
+            width: !isMobile ? `${editorWidth}%` : '100%',
+            height: isMobile ? `${editorWidth}%` : '100%'
           }} 
         >
           <EditorPanel />
@@ -92,8 +92,8 @@ export const EditorPage = () => {
         <div 
           className="flex flex-col min-w-0"
           style={{ 
-            width: window.innerWidth >= 768 ? `${100 - editorWidth}%` : '100%',
-            height: window.innerWidth < 768 ? `${100 - editorWidth}%` : '100%'
+            width: !isMobile ? `${100 - editorWidth}%` : '100%',
+            height: isMobile ? `${100 - editorWidth}%` : '100%'
           }} 
         >
           <ResultPanel />

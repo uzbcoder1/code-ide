@@ -1,20 +1,29 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
-import { LayoutDashboard, Users, FolderKanban, Activity, Settings, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Users, FolderKanban, Activity, Settings, ArrowLeft, Loader2 } from 'lucide-react';
 
 export const AdminLayout = () => {
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    if (!user || user.role !== 'admin') {
+    if (!token || !user || user.role !== 'admin') {
       navigate('/');
+    } else {
+      setIsChecking(false);
     }
-  }, [user, navigate]);
+  }, [user, token, navigate]);
 
-  if (!user || user.role !== 'admin') return null;
+  if (isChecking || !user || user.role !== 'admin') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-bg-main text-text-muted">
+        <Loader2 size={32} className="animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
