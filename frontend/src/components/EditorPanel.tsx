@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { Save, Play, Settings, X, CheckCircle, Sun, Moon, UserCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import { emmetHTML } from 'emmet-monaco-es';
 
 export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
@@ -50,7 +50,7 @@ export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
       setTerminalOutput(`$ Running ${activeProject.title}...\n\nWaiting for execution...`);
       setIsRunning(true);
       try {
-        const response = await axios.post(`${import.meta.env.VITE_API_URL}/execute`, {
+        const response = await api.post('/execute', {
           language: activeProject.language,
           content: activeProject.content
         });

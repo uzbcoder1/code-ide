@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { Play, Terminal, AlertCircle, RefreshCw } from 'lucide-react';
-import axios from 'axios';
+import api from '../../api';
 
 export const RunScreen: React.FC = () => {
   const { projects, activeProjectId, setTerminalOutput, terminalOutput } = useStore();
@@ -22,7 +22,7 @@ export const RunScreen: React.FC = () => {
     setIsRunning(true);
     
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/execute`, {
+      const response = await api.post('/execute', {
         language: activeProject.language,
         content: activeProject.content
       });
