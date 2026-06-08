@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import { useStore } from '../store/useStore';
 import { useAuthStore } from '../store/useAuthStore';

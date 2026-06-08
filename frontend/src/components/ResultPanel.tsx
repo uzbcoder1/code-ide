@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { RefreshCw, ExternalLink, Monitor, Tablet, Smartphone } from 'lucide-react';
 
