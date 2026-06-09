@@ -13,8 +13,8 @@ export const RunScreen: React.FC = () => {
     if (!activeProject) return;
     
     // HTML is handled by the Result panel
-    if (activeProject.language === 'html') {
-      setTerminalOutput('HTML projects run directly in the Result tab. Switch to Result to see your preview.');
+    if (['html', 'css', 'json'].includes(activeProject.language)) {
+      setTerminalOutput(`${activeProject.language.toUpperCase()} projects run directly in the Result tab. Switch to Result to see your preview.`);
       return;
     }
 

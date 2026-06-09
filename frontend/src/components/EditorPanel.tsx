@@ -43,7 +43,7 @@ export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
 
   const handleRun = async () => {
     if (!activeProject) return;
-    if (activeProject.language === 'html') {
+    if (['html', 'css', 'json'].includes(activeProject.language)) {
       setToastMessage('Live preview updated automatically in Result panel.');
       setTimeout(() => setToastMessage(''), 3000);
     } else {
