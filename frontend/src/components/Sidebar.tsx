@@ -5,7 +5,8 @@ import { FileCode, Plus, Trash2, Search, Menu } from 'lucide-react';
 const getLanguageFromExtension = (filename: string) => {
   const ext = filename.split('.').pop()?.toLowerCase();
   switch (ext) {
-    case 'html': case 'htm': case 'css': return 'html';
+    case 'html': case 'htm': return 'html';
+    case 'css': return 'css';
     case 'js': case 'jsx': return 'javascript';
     case 'ts': case 'tsx': return 'typescript';
     case 'py': return 'python';
