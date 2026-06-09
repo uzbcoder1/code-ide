@@ -37,9 +37,17 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="CodeStudio API")
 
 # Rate Limiter
-limiter = Limiter(key_func=get_remote_address)
+from slowapi.middleware import SlowAPIMiddleware
+
+def get_real_ip(request: Request):
+    if "x-forwarded-for" in request.headers:
+        return request.headers["x-forwarded-for"].split(",")[0].strip()
+    return request.client.host if request.client else "127.0.0.1"
+
+limiter = Limiter(key_func=get_real_ip)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 frontend_urls = os.getenv("FRONTEND_URL", "http://localhost:5173,http://127.0.0.1:5173").split(",")
 

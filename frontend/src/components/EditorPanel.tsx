@@ -62,9 +62,9 @@ export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
         finalOutput += `\nProcess finished with exit code ${exit_code}`;
         
         setTerminalOutput(finalOutput);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        setTerminalOutput(`$ Running ${activeProject.title}...\n\n[System Error]\nFailed to connect to execution engine. Make sure the backend server is running.\n${message}`);
+      } catch (err: any) {
+        const message = err.response?.data?.detail || err.message || 'Unknown error';
+        setTerminalOutput(`$ Running ${activeProject.title}...\n\n[System Error]\n${message}`);
       } finally {
         setIsRunning(false);
       }
