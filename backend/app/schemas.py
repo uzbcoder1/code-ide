@@ -30,7 +30,7 @@ class UserCreate(UserBase):
             raise ValueError("Username kamida 3 belgidan iborat bo'lishi kerak")
         if len(v) > 30:
             raise ValueError("Username 30 belgidan oshmasligi kerak")
-        if not v.isalnum() and "_" not in v:
+        if not all(c.isalnum() or c == '_' for c in v):
             raise ValueError("Username faqat harflar, raqamlar va '_' dan iborat bo'lishi kerak")
         return v
 

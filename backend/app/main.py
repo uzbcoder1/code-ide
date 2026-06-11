@@ -1,8 +1,4 @@
-import re
-import random
 import logging
-import time
-import tempfile
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Depends, HTTPException, status
@@ -166,9 +162,26 @@ def delete_project(project_id: int, db: Session = Depends(get_db), current_user:
     return {"status": "success"}
 
 @app.post("/execute", response_model=schemas.ExecuteResponse)
-@limiter.limit("20/minute")
+@limiter.limit("30/minute")
 def execute_code_endpoint(request: Request, payload: schemas.ExecuteRequest, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user_optional)):
-    """Kodni xavfsiz sandbox muhitida bajarish."""
+    """Kodni xavfsiz sandbox muhitida bajarish. Guest va login qilgan userlar uchun."""
+    
+    # Guest uchun qo'shimcha rate limit tekshiruvi (5/daqiqa)
+    if not current_user:
+        from slowapi.util import get_remote_address
+        # Guest so'rovlar sonini bazadan tekshirish (oxirgi 1 daqiqa)
+        from datetime import datetime, timezone, timedelta
+        one_minute_ago = datetime.now(timezone.utc) - timedelta(minutes=1)
+        guest_ip = get_real_ip(request)
+        recent_guest_executions = db.query(models.ExecutionHistory).filter(
+            models.ExecutionHistory.user_id == None,
+            models.ExecutionHistory.created_at >= one_minute_ago,
+        ).count()
+        if recent_guest_executions >= 10:
+            raise HTTPException(
+                status_code=429,
+                detail="Guest uchun limit: daqiqada 10 ta so'rov. Ro'yxatdan o'ting ko'proq ishlatish uchun."
+            )
     
     logger.info(
         "Kod bajarish so'rovi: til=%s, foydalanuvchi=%s",

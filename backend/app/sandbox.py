@@ -38,6 +38,36 @@ BLOCKED_PYTHON_BUILTINS = [
     "open", "breakpoint",
 ]
 
+# Sandbox chetlab o'tishni bloklash uchun qo'shimcha patternlar
+BLOCKED_PATTERNS = [
+    # __builtins__ orqali
+    r'__builtins__',
+    r'__subclasses__',
+    r'__bases__',
+    r'__mro__',
+    r'__class__',
+    r'__globals__',
+    r'__code__',
+    r'__dict__\s*\[',           # obj.__dict__['...']
+    # Xavfli built-in funksiyalar
+    r'\bgetattr\s*\(',
+    r'\bsetattr\s*\(',
+    r'\bdelattr\s*\(',
+    r'\bglobals\s*\(',
+    r'\blocals\s*\(',
+    r'\bvars\s*\(',
+    r'\bdir\s*\(',
+    r'\btype\s*\(\s*["\']',     # type('...', ...) — dinamik class yaratish
+    # String yashirish texnikalari
+    r'\bchr\s*\(',              # chr(111) + chr(115) = "os"
+    r'\bord\s*\(',
+    r'\bbytes\s*\(',
+    r'\bbytearray\s*\(',
+    # Xavfli modullar
+    r'\b__loader__',
+    r'\b__spec__',
+]
+
 EXECUTION_TIMEOUT = 10  # soniyalarda
 MAX_OUTPUT_LENGTH = 50000  # 50KB chiqish limiti
 
@@ -86,6 +116,14 @@ def validate_python_code(code: str) -> str | None:
             if re.search(pattern, stripped):
                 return (
                     f"Xavfsizlik xatosi (qator {i}): '{builtin}()' funksiyasi taqiqlangan. "
+                    f"Xavfsizlik sababli ba'zi tizim funksiyalari bloklanadi."
+                )
+
+        # Sandbox chetlab o'tish usullarini tekshirish
+        for pattern in BLOCKED_PATTERNS:
+            if re.search(pattern, stripped):
+                return (
+                    f"Xavfsizlik xatosi (qator {i}): Taqiqlangan ifoda aniqlandi. "
                     f"Xavfsizlik sababli ba'zi tizim funksiyalari bloklanadi."
                 )
 
