@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { Save, Play, Settings, X, CheckCircle, Sun, Moon, UserCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { emmetHTML } from 'emmet-monaco-es';
+import { emmetHTML, emmetCSS } from 'emmet-monaco-es';
 
 export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
   const { projects, activeProjectId, updateProjectContent, setTerminalOutput, theme, toggleTheme } = useStore();
@@ -21,6 +21,23 @@ export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
   const handleEditorDidMount = (editor: any, monaco: any) => {
     if (!emmetRegistered.current) {
       emmetHTML(monaco);
+      emmetCSS(monaco);
+      
+      // Basic Python snippets/completions
+      monaco.languages.registerCompletionItemProvider('python', {
+        provideCompletionItems: () => {
+          const suggestions = [
+            { label: 'print', kind: monaco.languages.CompletionItemKind.Function, insertText: 'print(${1:text})', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+            { label: 'def', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'def ${1:function_name}(${2:args}):\n\t${3:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+            { label: 'class', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'class ${1:ClassName}:\n\tdef __init__(self):\n\t\t${2:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+            { label: 'ifmain', kind: monaco.languages.CompletionItemKind.Snippet, insertText: 'if __name__ == "__main__":\n\t${1:main()}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+            { label: 'for', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'for ${1:item} in ${2:iterable}:\n\t${3:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+            { label: 'import', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'import ${1:module}' }
+          ];
+          return { suggestions };
+        }
+      });
+      
       emmetRegistered.current = true;
     }
     // Cursor pozitsiyasini kuzatish
