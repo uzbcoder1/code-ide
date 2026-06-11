@@ -177,7 +177,7 @@ def execute_code_endpoint(request: Request, payload: schemas.ExecuteRequest, db:
     )
     
     # Sandbox orqali kodni bajarish
-    result = execute_code(payload.language, payload.content)
+    result = execute_code(payload.language, payload.content, payload.stdin)
 
     # Natijani bazaga yozish
     new_log = models.ExecutionHistory(

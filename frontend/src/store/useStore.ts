@@ -14,6 +14,7 @@ interface EditorState {
   projects: Project[];
   activeProjectId: string | null;
   terminalOutput: string;
+  terminalInput: string;
   isSidebarOpen: boolean;
   theme: 'dark' | 'light';
   setActiveProject: (id: string) => void;
@@ -21,6 +22,7 @@ interface EditorState {
   addProject: (project: Project) => void;
   deleteProject: (id: string) => void;
   setTerminalOutput: (output: string) => void;
+  setTerminalInput: (input: string) => void;
   toggleSidebar: () => void;
   toggleTheme: () => void;
 }
@@ -52,6 +54,7 @@ export const useStore = create<EditorState>()(
       projects: [initialWelcomeProject],
       activeProjectId: '1',
       terminalOutput: '',
+      terminalInput: '',
       isSidebarOpen: true,
       theme: 'dark',
       
@@ -79,6 +82,7 @@ export const useStore = create<EditorState>()(
       }),
       
       setTerminalOutput: (output) => set({ terminalOutput: output }),
+      setTerminalInput: (input) => set({ terminalInput: input }),
       
       toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
       

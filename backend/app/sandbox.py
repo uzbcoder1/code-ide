@@ -99,7 +99,7 @@ def _truncate_output(output: str) -> str:
     return output
 
 
-def _run_process(cmd: list[str], timeout: int = EXECUTION_TIMEOUT, cwd: str | None = None) -> tuple[str, str, int]:
+def _run_process(cmd: list[str], timeout: int = EXECUTION_TIMEOUT, cwd: str | None = None, input_data: str | None = None) -> tuple[str, str, int]:
     """
     Jarayonni xavfsiz muhitda bajarish.
     Qaytaradi: (stdout, stderr, exit_code)
@@ -124,6 +124,7 @@ def _run_process(cmd: list[str], timeout: int = EXECUTION_TIMEOUT, cwd: str | No
     try:
         result = subprocess.run(
             cmd,
+            input=input_data,
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -144,7 +145,7 @@ def _run_process(cmd: list[str], timeout: int = EXECUTION_TIMEOUT, cwd: str | No
         return "", "Kod bajarishda ichki xatolik yuz berdi.", -1
 
 
-def execute_python(code: str, temp_dir: str) -> ExecutionResult:
+def execute_python(code: str, temp_dir: str, stdin: str = "") -> ExecutionResult:
     """Python kodini xavfsiz bajarish."""
     start_time = time.time()
 
@@ -158,13 +159,13 @@ def execute_python(code: str, temp_dir: str) -> ExecutionResult:
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(code)
 
-    output, error, exit_code = _run_process(["python", file_path], cwd=temp_dir)
+    output, error, exit_code = _run_process(["python", file_path], cwd=temp_dir, input_data=stdin)
 
     duration_ms = int((time.time() - start_time) * 1000)
     return ExecutionResult(output=output, error=error, exit_code=exit_code, duration_ms=duration_ms)
 
 
-def execute_javascript(code: str, temp_dir: str, is_typescript: bool = False) -> ExecutionResult:
+def execute_javascript(code: str, temp_dir: str, stdin: str = "", is_typescript: bool = False) -> ExecutionResult:
     """JavaScript/TypeScript kodini bajarish."""
     start_time = time.time()
 
@@ -178,13 +179,13 @@ def execute_javascript(code: str, temp_dir: str, is_typescript: bool = False) ->
     else:
         cmd = ["node", file_path]
 
-    output, error, exit_code = _run_process(cmd, cwd=temp_dir)
+    output, error, exit_code = _run_process(cmd, cwd=temp_dir, input_data=stdin)
 
     duration_ms = int((time.time() - start_time) * 1000)
     return ExecutionResult(output=output, error=error, exit_code=exit_code, duration_ms=duration_ms)
 
 
-def execute_cpp(code: str, temp_dir: str) -> ExecutionResult:
+def execute_cpp(code: str, temp_dir: str, stdin: str = "") -> ExecutionResult:
     """C/C++ kodini kompilatsiya va bajarish."""
     start_time = time.time()
 
@@ -207,13 +208,13 @@ def execute_cpp(code: str, temp_dir: str) -> ExecutionResult:
         return ExecutionResult(error=compile_error, exit_code=compile_code, duration_ms=duration_ms)
 
     # Bajarish
-    output, error, exit_code = _run_process([exe_path], cwd=temp_dir)
+    output, error, exit_code = _run_process([exe_path], cwd=temp_dir, input_data=stdin)
 
     duration_ms = int((time.time() - start_time) * 1000)
     return ExecutionResult(output=output, error=error, exit_code=exit_code, duration_ms=duration_ms)
 
 
-def execute_java(code: str, temp_dir: str) -> ExecutionResult:
+def execute_java(code: str, temp_dir: str, stdin: str = "") -> ExecutionResult:
     """Java kodini kompilatsiya va bajarish."""
     start_time = time.time()
 
@@ -235,14 +236,14 @@ def execute_java(code: str, temp_dir: str) -> ExecutionResult:
 
     # Bajarish
     output, error, exit_code = _run_process(
-        ["java", "-cp", temp_dir, class_name], cwd=temp_dir
+        ["java", "-cp", temp_dir, class_name], cwd=temp_dir, input_data=stdin
     )
 
     duration_ms = int((time.time() - start_time) * 1000)
     return ExecutionResult(output=output, error=error, exit_code=exit_code, duration_ms=duration_ms)
 
 
-def execute_code(language: str, code: str) -> ExecutionResult:
+def execute_code(language: str, code: str, stdin: str = "") -> ExecutionResult:
     """
     Kodni xavfsiz muhitda bajarish — asosiy entry point.
 
@@ -255,15 +256,15 @@ def execute_code(language: str, code: str) -> ExecutionResult:
     """
     with tempfile.TemporaryDirectory() as temp_dir:
         if language == "python":
-            return execute_python(code, temp_dir)
+            return execute_python(code, temp_dir, stdin)
         elif language in ("javascript", "js"):
-            return execute_javascript(code, temp_dir, is_typescript=False)
+            return execute_javascript(code, temp_dir, stdin, is_typescript=False)
         elif language == "typescript":
-            return execute_javascript(code, temp_dir, is_typescript=True)
+            return execute_javascript(code, temp_dir, stdin, is_typescript=True)
         elif language in ("cpp", "c", "c++", "cc"):
-            return execute_cpp(code, temp_dir)
+            return execute_cpp(code, temp_dir, stdin)
         elif language == "java":
-            return execute_java(code, temp_dir)
+            return execute_java(code, temp_dir, stdin)
         else:
             return ExecutionResult(
                 error=f"'{language}' tili hali qo'llab-quvvatlanmaydi.",

@@ -4,7 +4,7 @@ import { Play, Terminal, AlertCircle, RefreshCw } from 'lucide-react';
 import api from '../../api';
 
 export const RunScreen: React.FC = () => {
-  const { projects, activeProjectId, setTerminalOutput, terminalOutput } = useStore();
+  const { projects, activeProjectId, setTerminalOutput, terminalOutput, terminalInput, setTerminalInput } = useStore();
   const [isRunning, setIsRunning] = useState(false);
   
   const activeProject = projects.find(p => p.id === activeProjectId);
@@ -24,7 +24,8 @@ export const RunScreen: React.FC = () => {
     try {
       const response = await api.post('/execute', {
         language: activeProject.language,
-        content: activeProject.content
+        content: activeProject.content,
+        stdin: terminalInput
       });
       
       const { output, error, exit_code } = response.data;
@@ -105,9 +106,32 @@ export const RunScreen: React.FC = () => {
             <Terminal size={14} />
             Console Output
           </div>
-          <div className="flex-1 p-4 overflow-y-auto font-mono text-sm text-text-main whitespace-pre-wrap">
+          <div className="flex-1 overflow-hidden flex flex-col p-4 bg-[#0d0d0d]">
+          <div className="mb-4 pb-4 border-b border-[#222] shrink-0">
+            <div className="text-xs text-gray-400 mb-2 flex justify-between items-center">
+              <span>Standard Input (stdin)</span>
+              {terminalInput && (
+                <button 
+                  onClick={() => setTerminalInput('')}
+                  className="text-gray-500 hover:text-gray-300 text-[10px]"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <textarea
+              className="w-full h-16 bg-[#1a1a1a] border border-[#333] rounded p-2 text-green-400 font-mono text-xs focus:outline-none focus:border-green-500 resize-y"
+              placeholder="Enter input data here before running..."
+              value={terminalInput}
+              onChange={(e) => setTerminalInput(e.target.value)}
+            />
+          </div>
+          
+          <div className="text-xs text-gray-400 mb-2 shrink-0">Standard Output (stdout)</div>
+          <div className="w-full font-mono text-xs text-green-400 whitespace-pre-wrap flex-1 overflow-y-auto">
             {terminalOutput || <span className="text-text-muted italic">No output yet. Run your code to see results here.</span>}
           </div>
+        </div>
         </div>
       </div>
     </div>

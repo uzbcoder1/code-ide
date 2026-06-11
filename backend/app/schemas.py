@@ -73,6 +73,7 @@ class ProjectResponse(BaseModel):
 class ExecuteRequest(BaseModel):
     language: str
     content: str
+    stdin: str = ""
 
 class ExecuteResponse(BaseModel):
     output: str
