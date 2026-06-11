@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { useAuthStore } from '../../store/useAuthStore';
 
 export const AdminLogs = () => {
@@ -9,9 +9,7 @@ export const AdminLogs = () => {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/logs`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.get('/admin/logs');
         setLogs(res.data);
       } catch (err) {
         console.error("Failed to fetch logs", err);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { Trash2 } from 'lucide-react';
 
@@ -9,9 +9,7 @@ export const AdminProjects = () => {
 
   const fetchProjects = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/projects`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/admin/projects');
       setProjects(res.data);
     } catch (err) {
       console.error("Failed to fetch projects", err);
@@ -23,14 +21,13 @@ export const AdminProjects = () => {
   }, [token]);
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this project?")) return;
-    try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/admin/projects/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      fetchProjects();
-    } catch (err) {
-      console.error("Failed to delete project", err);
+    if (window.confirm("Are you sure you want to delete this project?")) {
+      try {
+        await api.delete(`/admin/projects/${id}`);
+        fetchProjects();
+      } catch (err) {
+        console.error("Failed to delete project", err);
+      }
     }
   };
 

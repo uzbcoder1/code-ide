@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api';
 import { useAuthStore } from '../../store/useAuthStore';
 
 export const AdminUsers = () => {
@@ -9,9 +9,7 @@ export const AdminUsers = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/users`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.get('/admin/users');
         setUsers(res.data);
       } catch (err) {
         console.error("Failed to fetch users", err);

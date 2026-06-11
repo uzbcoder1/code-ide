@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
 import { useAuthStore } from '../../store/useAuthStore';
+import api from '../../api';
 import { Users, FolderKanban, Activity } from 'lucide-react';
 
 export const AdminDashboard = () => {
@@ -10,9 +10,7 @@ export const AdminDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/stats`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await api.get('/admin/stats');
         setStats(res.data);
       } catch (err) {
         console.error("Failed to fetch stats", err);

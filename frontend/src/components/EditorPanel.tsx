@@ -8,7 +8,7 @@ import api from '../api';
 import { emmetHTML, emmetCSS } from 'emmet-monaco-es';
 
 export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
-  const { projects, activeProjectId, updateProjectContent, setTerminalOutput, theme, toggleTheme } = useStore();
+  const { projects, activeProjectId, updateProjectContent, setTerminalOutput, terminalInput, theme, toggleTheme } = useStore();
   const { user, logout } = useAuthStore();
   const [toastMessage, setToastMessage] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -69,7 +69,8 @@ export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
       try {
         const response = await api.post('/execute', {
           language: activeProject.language,
-          content: activeProject.content
+          content: activeProject.content,
+          stdin: terminalInput
         });
         
         const { output, error, exit_code } = response.data;
