@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useStore } from '../../store/useStore';
-import { Play, Terminal, AlertCircle, RefreshCw } from 'lucide-react';
+import { Play, Terminal, AlertCircle } from 'lucide-react';
 import { InteractiveTerminal } from '../InteractiveTerminal';
 
 export const RunScreen: React.FC = () => {
   const { projects, activeProjectId, runTrigger, triggerRun } = useStore();
-  const [isRunning, setIsRunning] = useState(false);
   
   const activeProject = projects.find(p => p.id === activeProjectId);
 

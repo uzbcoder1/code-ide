@@ -29,7 +29,7 @@ export const ResultPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
           </h2>
         </div>
         <div className="flex-1 p-2 bg-[#1e1e1e]">
-          {runTrigger > 0 ? (
+          {runTrigger > 0 && activeProject ? (
             <InteractiveTerminal 
               key={runTrigger} // Re-mount terminal on each run
               language={activeProject.language}

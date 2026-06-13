@@ -4,15 +4,13 @@ import { useStore } from '../store/useStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { Save, Play, Settings, X, CheckCircle, Sun, Moon, UserCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import api from '../api';
 import { emmetHTML, emmetCSS } from 'emmet-monaco-es';
 
 export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
-  const { projects, activeProjectId, updateProjectContent, setTerminalOutput, terminalInput, theme, toggleTheme, triggerRun } = useStore();
+  const { projects, activeProjectId, updateProjectContent, theme, toggleTheme, triggerRun } = useStore();
   const { user, logout } = useAuthStore();
   const [toastMessage, setToastMessage] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
   
   const emmetRegistered = useRef(false);
@@ -97,8 +95,8 @@ export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
           </button>
           {!isMobile && (
             <>
-              <button onClick={handleRun} disabled={isRunning} className={`flex items-center gap-1 px-4 py-1.5 text-white rounded text-sm transition-colors font-semibold shadow-sm ${isRunning ? 'bg-primary/50 cursor-not-allowed' : 'bg-primary hover:bg-primary-hover'}`}>
-                <Play size={16} fill="currentColor" /> {isRunning ? 'Running...' : 'Run'}
+              <button onClick={handleRun} className="flex items-center gap-1 px-4 py-1.5 text-white rounded text-sm transition-colors font-semibold shadow-sm bg-primary hover:bg-primary-hover">
+                <Play size={16} fill="currentColor" /> Run
               </button>
               <div className="w-px h-6 bg-border-main mx-1"></div>
               <button onClick={toggleTheme} className="text-text-muted hover:text-text-main transition-colors" title="Toggle Theme">
