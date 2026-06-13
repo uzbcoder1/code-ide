@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { RefreshCw, ExternalLink, Monitor, Tablet, Smartphone } from 'lucide-react';
+import { InteractiveTerminal } from './InteractiveTerminal';
 
 export const ResultPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
-  const { projects, activeProjectId, terminalOutput, terminalInput, setTerminalInput } = useStore();
+  const { projects, activeProjectId, runTrigger } = useStore();
   const activeProject = projects.find(p => p.id === activeProjectId);
   const [srcDoc, setSrcDoc] = useState('');
   const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -27,32 +28,18 @@ export const ResultPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
             <Monitor size={16} /> Terminal
           </h2>
         </div>
-        <div className="flex-1 flex flex-col bg-[#0d0d0d] overflow-hidden">
-          <div className="p-4 border-b border-[#222]">
-            <div className="text-xs text-gray-400 mb-2 flex justify-between items-center">
-              <span>Standard Input (stdin)</span>
-              {terminalInput && (
-                <button 
-                  onClick={() => setTerminalInput('')}
-                  className="text-gray-500 hover:text-gray-300 text-[10px]"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            <textarea
-              className="w-full h-20 bg-[#1a1a1a] border border-[#333] rounded p-2 text-green-400 font-mono text-sm focus:outline-none focus:border-green-500 resize-y"
-              placeholder="Enter input data here before running..."
-              value={terminalInput}
-              onChange={(e) => setTerminalInput(e.target.value)}
+        <div className="flex-1 p-2 bg-[#1e1e1e]">
+          {runTrigger > 0 ? (
+            <InteractiveTerminal 
+              key={runTrigger} // Re-mount terminal on each run
+              language={activeProject.language}
+              content={activeProject.content}
             />
-          </div>
-          <div className="flex-1 p-4 overflow-y-auto">
-            <div className="text-xs text-gray-400 mb-2">Standard Output (stdout)</div>
-            <div className="w-full font-mono text-sm text-green-400 whitespace-pre-wrap">
-              {terminalOutput || '> Ready. Type input above (if needed) and press "Run" to execute...'}
+          ) : (
+            <div className="text-gray-400 font-mono text-sm p-4">
+              &gt; Ready. Press "Run" to start the interactive terminal...
             </div>
-          </div>
+          )}
         </div>
       </div>
     );

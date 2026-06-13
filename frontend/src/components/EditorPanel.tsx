@@ -8,7 +8,7 @@ import api from '../api';
 import { emmetHTML, emmetCSS } from 'emmet-monaco-es';
 
 export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
-  const { projects, activeProjectId, updateProjectContent, setTerminalOutput, terminalInput, theme, toggleTheme } = useStore();
+  const { projects, activeProjectId, updateProjectContent, setTerminalOutput, terminalInput, theme, toggleTheme, triggerRun } = useStore();
   const { user, logout } = useAuthStore();
   const [toastMessage, setToastMessage] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -58,34 +58,14 @@ export const EditorPanel = ({ isMobile = false }: { isMobile?: boolean }) => {
     setTimeout(() => setToastMessage(''), 3000);
   };
 
-  const handleRun = async () => {
+  const handleRun = () => {
     if (!activeProject) return;
     if (['html', 'css', 'json'].includes(activeProject.language)) {
       setToastMessage('Live preview updated automatically in Result panel.');
       setTimeout(() => setToastMessage(''), 3000);
     } else {
-      setTerminalOutput(`$ Running ${activeProject.title}...\n\nWaiting for execution...`);
-      setIsRunning(true);
-      try {
-        const response = await api.post('/execute', {
-          language: activeProject.language,
-          content: activeProject.content,
-          stdin: terminalInput
-        });
-        
-        const { output, error, exit_code } = response.data;
-        let finalOutput = `$ Running ${activeProject.title}...\n\n`;
-        if (output) finalOutput += `${output}\n`;
-        if (error) finalOutput += `[Error]\n${error}\n`;
-        finalOutput += `\nProcess finished with exit code ${exit_code}`;
-        
-        setTerminalOutput(finalOutput);
-      } catch (err: any) {
-        const message = err.response?.data?.detail || err.message || 'Unknown error';
-        setTerminalOutput(`$ Running ${activeProject.title}...\n\n[System Error]\n${message}`);
-      } finally {
-        setIsRunning(false);
-      }
+      triggerRun();
+      setToastMessage('Execution started in Result panel.');
     }
     setTimeout(() => setToastMessage(''), 4000);
   };

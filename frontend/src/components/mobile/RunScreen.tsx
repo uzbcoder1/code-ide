@@ -1,46 +1,17 @@
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { Play, Terminal, AlertCircle, RefreshCw } from 'lucide-react';
-import api from '../../api';
+import { InteractiveTerminal } from '../InteractiveTerminal';
 
 export const RunScreen: React.FC = () => {
-  const { projects, activeProjectId, setTerminalOutput, terminalOutput, terminalInput, setTerminalInput } = useStore();
+  const { projects, activeProjectId, runTrigger, triggerRun } = useStore();
   const [isRunning, setIsRunning] = useState(false);
   
   const activeProject = projects.find(p => p.id === activeProjectId);
 
-  const handleRun = async () => {
+  const handleRun = () => {
     if (!activeProject) return;
-    
-    // HTML is handled by the Result panel
-    if (['html', 'css', 'json'].includes(activeProject.language)) {
-      setTerminalOutput(`${activeProject.language.toUpperCase()} projects run directly in the Result tab. Switch to Result to see your preview.`);
-      return;
-    }
-
-    setTerminalOutput(`$ Running ${activeProject.title}...\n\nWaiting for execution...`);
-    setIsRunning(true);
-    
-    try {
-      const response = await api.post('/execute', {
-        language: activeProject.language,
-        content: activeProject.content,
-        stdin: terminalInput
-      });
-      
-      const { output, error, exit_code } = response.data;
-      let finalOutput = `$ Running ${activeProject.title}...\n\n`;
-      if (output) finalOutput += `${output}\n`;
-      if (error) finalOutput += `[Error]\n${error}\n`;
-      finalOutput += `\nProcess finished with exit code ${exit_code}`;
-      
-      setTerminalOutput(finalOutput);
-    } catch (err: any) {
-      const message = err.response?.data?.detail || err.message || 'Unknown error';
-      setTerminalOutput(`$ Running ${activeProject.title}...\n\n[System Error]\n${message}`);
-    } finally {
-      setIsRunning(false);
-    }
+    triggerRun();
   };
 
   if (!activeProject) {
@@ -71,11 +42,7 @@ export const RunScreen: React.FC = () => {
       <div className="flex-1 flex flex-col p-4 overflow-y-auto">
         <div className="flex-1 flex flex-col items-center justify-center py-8">
           <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-            {isRunning ? (
-              <RefreshCw size={40} className="text-primary animate-spin" />
-            ) : (
-              <Play size={40} className="text-primary ml-2" />
-            )}
+            <Play size={40} className="text-primary ml-2" />
           </div>
           
           <h3 className="text-xl font-bold mb-2">Ready to run</h3>
@@ -85,18 +52,10 @@ export const RunScreen: React.FC = () => {
           
           <button 
             onClick={handleRun}
-            disabled={isRunning}
-            className={`w-full max-w-xs py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-transform ${
-              isRunning 
-                ? 'bg-primary/50 text-white/70 cursor-not-allowed' 
-                : 'bg-primary text-white active:scale-95'
-            }`}
+            className={`w-full max-w-xs py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-transform bg-primary text-white active:scale-95`}
           >
-            {isRunning ? (
-              <>Running...</>
-            ) : (
-              <><Play size={24} fill="currentColor" /> Run Code</>
-            )}
+            <Play size={16} fill="currentColor" />
+            <span>Run</span>
           </button>
         </div>
 
@@ -106,32 +65,21 @@ export const RunScreen: React.FC = () => {
             <Terminal size={14} />
             Console Output
           </div>
-          <div className="flex-1 overflow-hidden flex flex-col p-4 bg-[#0d0d0d]">
-          <div className="mb-4 pb-4 border-b border-[#222] shrink-0">
-            <div className="text-xs text-gray-400 mb-2 flex justify-between items-center">
-              <span>Standard Input (stdin)</span>
-              {terminalInput && (
-                <button 
-                  onClick={() => setTerminalInput('')}
-                  className="text-gray-500 hover:text-gray-300 text-[10px]"
-                >
-                  Clear
-                </button>
+          <div className="flex-1 flex flex-col min-h-0 bg-[#0d0d0d]">
+            <div className="flex-1 p-2 bg-[#1e1e1e]">
+              {runTrigger > 0 ? (
+                <InteractiveTerminal 
+                  key={runTrigger} 
+                  language={activeProject.language}
+                  content={activeProject.content}
+                />
+              ) : (
+                <div className="text-gray-400 font-mono text-sm p-4">
+                  &gt; Ready. Press "Run" to start the interactive terminal...
+                </div>
               )}
             </div>
-            <textarea
-              className="w-full h-16 bg-[#1a1a1a] border border-[#333] rounded p-2 text-green-400 font-mono text-xs focus:outline-none focus:border-green-500 resize-y"
-              placeholder="Enter input data here before running..."
-              value={terminalInput}
-              onChange={(e) => setTerminalInput(e.target.value)}
-            />
           </div>
-          
-          <div className="text-xs text-gray-400 mb-2 shrink-0">Standard Output (stdout)</div>
-          <div className="w-full font-mono text-xs text-green-400 whitespace-pre-wrap flex-1 overflow-y-auto">
-            {terminalOutput || <span className="text-text-muted italic">No output yet. Run your code to see results here.</span>}
-          </div>
-        </div>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
@@ -203,6 +203,54 @@ def execute_code_endpoint(request: Request, payload: schemas.ExecuteRequest, db:
     db.commit()
             
     return schemas.ExecuteResponse(output=result.output, error=result.error, exit_code=result.exit_code)
+
+@app.websocket("/execute/ws")
+async def execute_code_ws(websocket: WebSocket, db: Session = Depends(get_db)):
+    await websocket.accept()
+    
+    # Kutilgan format: {"language": "python", "content": "print('hello')", "token": "..."}
+    try:
+        init_data = await websocket.receive_json()
+        language = init_data.get("language")
+        content = init_data.get("content")
+        
+        # Token validation (optional, can be guest)
+        token = init_data.get("token")
+        current_user = None
+        if token:
+            current_user = auth.get_current_user_optional(token, db)
+            
+        logger.info(
+            "WebSocket kod bajarish so'rovi: til=%s, foydalanuvchi=%s",
+            language,
+            current_user.username if current_user else "Guest",
+        )
+        
+        from .sandbox import execute_interactive
+        
+        start_time = datetime.now(timezone.utc)
+        exit_code, error = await execute_interactive(websocket, language, content)
+        duration = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
+        
+        # Natijani bazaga yozish
+        new_log = models.ExecutionHistory(
+            user_id=current_user.id if current_user else None,
+            language=language,
+            status="success" if exit_code == 0 else "error",
+            duration=duration,
+        )
+        db.add(new_log)
+        db.commit()
+        
+    except WebSocketDisconnect:
+        logger.info("WebSocket connection closed by client")
+    except Exception as e:
+        logger.error(f"WebSocket execution error: {e}")
+        try:
+            await websocket.send_text(f"\\r\\n[Server Error]: {str(e)}")
+            await websocket.close()
+        except:
+            pass
 
 # --- Admin Endpoints ---
 

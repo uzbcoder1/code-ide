@@ -25,6 +25,8 @@ interface EditorState {
   setTerminalInput: (input: string) => void;
   toggleSidebar: () => void;
   toggleTheme: () => void;
+  runTrigger: number;
+  triggerRun: () => void;
 }
 
 // Custom storage engine using idb-keyval for IndexedDB
@@ -94,7 +96,9 @@ export const useStore = create<EditorState>()(
           document.documentElement.classList.remove('light-theme');
         }
         return { theme: newTheme };
-      })
+      }),
+      runTrigger: 0,
+      triggerRun: () => set((state) => ({ runTrigger: state.runTrigger + 1 }))
     }),
     {
       name: 'codestudio-storage', // unique name for IndexedDB

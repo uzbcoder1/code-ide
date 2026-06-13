@@ -15,6 +15,8 @@ import re
 import logging
 import platform
 from dataclasses import dataclass
+import asyncio
+from fastapi import WebSocket, WebSocketDisconnect
 
 logger = logging.getLogger(__name__)
 
@@ -309,3 +311,163 @@ def execute_code(language: str, code: str, stdin: str = "") -> ExecutionResult:
                 exit_code=1,
                 duration_ms=0,
             )
+
+async def _stream_output(stream: asyncio.StreamReader, websocket: WebSocket):
+    try:
+        while True:
+            # chunk by chunk to support interactive typing
+            data = await stream.read(1024)
+            if not data:
+                break
+            # send to websocket
+            text = data.decode("utf-8", errors="replace")
+            # xterm.js needs \r\n for newlines, but let's just send raw text, xterm frontend can format if needed.
+            await websocket.send_text(text)
+    except Exception as e:
+        logger.error(f"Stream output error: {e}")
+
+async def _receive_input(stream: asyncio.StreamWriter, websocket: WebSocket, process: asyncio.subprocess.Process):
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Send input to process
+            stream.write(data.encode("utf-8"))
+            await stream.drain()
+    except WebSocketDisconnect:
+        # Client disconnected
+        try:
+            process.terminate()
+        except:
+            pass
+    except Exception as e:
+        logger.error(f"Receive input error: {e}")
+
+async def execute_interactive(websocket: WebSocket, language: str, code: str) -> tuple[int, str]:
+    """
+    WebSocket orqali real vaqtda kod bajarish (Interactive).
+    Qaytaradi: (exit_code, error_message)
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # 1. Validation va muhit sozlash
+        cmd = []
+        if language == "python":
+            validation_error = validate_python_code(code)
+            if validation_error:
+                await websocket.send_text(f"\\r\\n[Security Error]: {validation_error}\\r\\n")
+                return 1, validation_error
+            
+            file_path = os.path.join(temp_dir, "main.py")
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(code)
+            cmd = ["python", "-u", file_path] # -u force unbuffered output!
+            
+        elif language in ("javascript", "js"):
+            file_path = os.path.join(temp_dir, "main.js")
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(code)
+            cmd = ["node", file_path]
+            
+        elif language == "typescript":
+            file_path = os.path.join(temp_dir, "main.ts")
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(code)
+            cmd = ["npx", "ts-node", file_path]
+            
+        elif language in ("cpp", "c", "c++", "cc"):
+            file_path = os.path.join(temp_dir, "main.cpp")
+            exe_path = os.path.join(temp_dir, "main.exe" if platform.system() == "Windows" else "main.out")
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(code)
+            
+            # Kompilatsiya
+            compile_proc = await asyncio.create_subprocess_exec(
+                "g++", file_path, "-o", exe_path,
+                cwd=temp_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await compile_proc.communicate()
+            if compile_proc.returncode != 0:
+                await websocket.send_text(f"\\r\\n[Compilation Error]\\r\\n{stderr.decode('utf-8', errors='replace')}")
+                return compile_proc.returncode, "Compilation error"
+            
+            cmd = [exe_path]
+            
+        elif language == "java":
+            match = re.search(r'public\s+class\s+(\w+)', code)
+            class_name = match.group(1) if match else "Main"
+            file_path = os.path.join(temp_dir, f"{class_name}.java")
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(code)
+            
+            compile_proc = await asyncio.create_subprocess_exec(
+                "javac", file_path,
+                cwd=temp_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await compile_proc.communicate()
+            if compile_proc.returncode != 0:
+                await websocket.send_text(f"\\r\\n[Compilation Error]\\r\\n{stderr.decode('utf-8', errors='replace')}")
+                return compile_proc.returncode, "Compilation error"
+                
+            cmd = ["java", "-cp", temp_dir, class_name]
+            
+        else:
+            await websocket.send_text(f"\\r\\n[System Error]: '{language}' tili qo'llab quvvatlanmaydi.\\r\\n")
+            return 1, "Unsupported language"
+
+        safe_env = {
+            "PATH": os.environ.get("PATH", ""),
+            "LANG": "en_US.UTF-8",
+            "HOME": temp_dir,
+            "PYTHONUNBUFFERED": "1" # Force Python to not buffer stdout
+        }
+        if platform.system() == "Windows":
+            safe_env["SystemRoot"] = os.environ.get("SystemRoot", r"C:\Windows")
+            safe_env["TEMP"] = os.environ.get("TEMP", tempfile.gettempdir())
+            safe_env["TMP"] = os.environ.get("TMP", tempfile.gettempdir())
+            if os.environ.get("JAVA_HOME"):
+                safe_env["JAVA_HOME"] = os.environ.get("JAVA_HOME")
+
+        # Asinxron jarayonni boshlash
+        try:
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=temp_dir,
+                env=safe_env
+            )
+            
+            # Fon vazifalari
+            tasks = [
+                asyncio.create_task(_stream_output(process.stdout, websocket)),
+                asyncio.create_task(_stream_output(process.stderr, websocket)),
+                asyncio.create_task(_receive_input(process.stdin, websocket, process))
+            ]
+            
+            # process tugashini yoki vaqt tugashini kutish
+            try:
+                await asyncio.wait_for(process.wait(), timeout=EXECUTION_TIMEOUT)
+            except asyncio.TimeoutError:
+                try:
+                    process.terminate()
+                except:
+                    pass
+                await websocket.send_text(f"\\r\\n[System Error]: Bajarish vaqti tugadi ({EXECUTION_TIMEOUT} soniya)\\r\\n")
+                
+            # Tozalash
+            for t in tasks:
+                t.cancel()
+                
+            exit_code = process.returncode if process.returncode is not None else -1
+            await websocket.send_text(f"\\r\\nProcess finished with exit code {exit_code}\\r\\n")
+            await websocket.close()
+            return exit_code, ""
+            
+        except Exception as e:
+            logger.exception("Interactive execution error")
+            await websocket.send_text(f"\\r\\n[System Error]: {str(e)}\\r\\n")
+            return -1, str(e)
